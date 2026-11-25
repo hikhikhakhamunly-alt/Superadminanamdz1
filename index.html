@@ -4,50 +4,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ANH NAM DZ - SUPER ADMIN</title>
+<title>ANH NAM DZ | SUPER ADMIN</title>
 <style>
 *{box-sizing:border-box}
 body{
  margin:0;min-height:100vh;padding:20px;
- background:radial-gradient(circle at top,#18365d,#070b16 65%);
+ background:radial-gradient(circle at 20% 0%,#183d66,#080d19 65%);
  color:#fff;font-family:Arial,sans-serif
 }
 .wrap{max-width:950px;margin:35px auto}
 .panel{
- background:#101a2c;border:1px solid #29476c;
- border-radius:20px;padding:24px;
- box-shadow:0 15px 50px #0008
+ background:#101b2e;border:1px solid #294b70;
+ border-radius:20px;padding:25px;
+ box-shadow:0 15px 60px #0009
 }
-h1{text-align:center;color:#54dcff;letter-spacing:2px}
-.sub{text-align:center;color:#9bb2d0}
+h1{text-align:center;color:#58dcff;letter-spacing:3px}
+.sub{text-align:center;color:#91a9c7}
 .section{
- background:#0a1425;border:1px solid #243c5b;
+ background:#0a1527;border:1px solid #29415f;
  border-radius:14px;padding:18px;margin-top:18px
 }
 input,select{
- width:100%;padding:14px;margin:7px 0;
- background:#091323;color:white;
+ width:100%;padding:14px;margin:8px 0;
+ background:#081323;color:#fff;
  border:1px solid #345071;border-radius:9px;
- font-size:15px
+ font-size:15px;outline:none
 }
+input:focus,select:focus{border-color:#38cfff}
 button{
  padding:13px 17px;border:0;border-radius:9px;
- color:white;font-weight:bold;cursor:pointer;
+ color:#fff;font-weight:bold;cursor:pointer;
  background:linear-gradient(90deg,#00a9e9,#625cff);
  margin:5px 3px
 }
 button:hover{filter:brightness(1.2)}
+button:disabled{opacity:.6;cursor:wait}
 .full{width:100%}
 .hidden{display:none}
 .key{
  padding:14px;margin:10px 0;
  border:1px solid #29415f;border-radius:10px;
- overflow-wrap:anywhere;background:#101d31
+ overflow-wrap:anywhere;background:#101e33
 }
 .green{color:#55e6a5}
 .red{color:#ff7777}
-.small{font-size:12px;color:#9bb2d0}
+.status{color:#55dfff}
 .actions{display:flex;flex-wrap:wrap;gap:5px}
+.loader{
+ width:19px;height:19px;display:inline-block;
+ border:3px solid #ffffff35;border-top-color:#55dcff;
+ border-radius:50%;animation:spin .7s linear infinite;
+ vertical-align:middle;margin-right:8px
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loginMsg{text-align:center;min-height:25px;color:#55dcff}
 </style>
 </head>
 <body>
@@ -56,16 +66,18 @@ button:hover{filter:brightness(1.2)}
 
 <div id="login">
  <h1>ANH NAM DZ</h1>
- <p class="sub">SUPER ADMIN CONTROL PANEL</p>
- <input id="username" placeholder="Tên đăng nhập">
- <input id="password" type="password" placeholder="Mật khẩu">
- <button class="full" onclick="login()">ĐĂNG NHẬP</button>
- <p id="loginMsg"></p>
+ <p class="sub">SUPER ADMIN CONTROL SYSTEM</p>
+ <div class="section">
+  <input id="username" placeholder="Tên đăng nhập" autocomplete="username">
+  <input id="password" type="password" placeholder="Mật khẩu" autocomplete="current-password">
+  <button class="full" id="loginBtn" onclick="login()">ĐĂNG NHẬP HỆ THỐNG</button>
+  <p id="loginMsg"></p>
+ </div>
 </div>
 
 <div id="dashboard" class="hidden">
  <h1>ANH NAM DZ</h1>
- <p class="sub">SUPER ADMIN · QUẢN LÝ KEY HỆ THỐNG</p>
+ <p class="sub">SUPER ADMIN · KEY MANAGEMENT</p>
 
  <div class="section">
   <h3>✦ TẠO KEY MỚI</h3>
@@ -83,16 +95,16 @@ button:hover{filter:brightness(1.2)}
   </select>
 
   <label>Số thiết bị được phép</label>
-  <input id="count" type="number" min="1" value="1">
+  <input id="count" type="number" min="1" max="1000" value="1">
 
   <button class="full" onclick="createKey()">+ TẠO KEY</button>
   <p id="createMsg"></p>
  </div>
 
  <div class="section">
-  <h3>✦ DANH SÁCH KEY</h3>
+  <h3>✦ QUẢN LÝ KEY</h3>
   <button onclick="loadKeys()">↻ LÀM MỚI</button>
-  <div id="keys">Đang chờ tải dữ liệu...</div>
+  <div id="keys">Chưa tải danh sách.</div>
  </div>
 
  <button class="full" onclick="logout()">ĐĂNG XUẤT</button>
@@ -108,10 +120,29 @@ function getToken(){
  return sessionStorage.getItem("hq_admin_token");
 }
 
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+function escapeHTML(s){
+ return String(s??"").replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",
+  '"':"&quot;","'":"&#39;"
+ }[c]));
+}
+
 async function login(){
  const msg=document.getElementById("loginMsg");
- msg.textContent="Đang xác minh...";
+ const btn=document.getElementById("loginBtn");
+
+ btn.disabled=true;
+ btn.innerHTML='<span class="loader"></span> ĐANG XÁC MINH';
+ msg.textContent="ĐANG KẾT NỐI MÁY CHỦ...";
+
  try{
+  await wait(700);
+  msg.textContent="ĐANG KIỂM TRA TÀI KHOẢN...";
+  await wait(600);
+  msg.textContent="ĐANG XÁC MINH QUYỀN SUPER ADMIN...";
+
   const r=await fetch(API+"/api/admin/login",{
    method:"POST",
    headers:{"Content-Type":"application/json"},
@@ -120,12 +151,22 @@ async function login(){
     password:document.getElementById("password").value
    })
   });
+
   const d=await r.json();
-  if(!d.ok) throw new Error(d.error||"Đăng nhập thất bại");
+  await wait(700);
+
+  if(!d.ok)throw new Error(d.error||"Tài khoản không hợp lệ");
+
   sessionStorage.setItem("hq_admin_token",d.token);
+  msg.innerHTML='<span class="green">XÁC MINH THÀNH CÔNG</span>';
+  await wait(400);
   showDashboard();
+
  }catch(e){
   msg.innerHTML='<span class="red">'+escapeHTML(e.message)+'</span>';
+ }finally{
+  btn.disabled=false;
+  btn.textContent="ĐĂNG NHẬP HỆ THỐNG";
  }
 }
 
@@ -140,18 +181,6 @@ function logout(){
  location.reload();
 }
 
-function escapeHTML(s){
- return String(s??"").replace(/[&<>"']/g,c=>({
-  "&":"&amp;","<":"&lt;",">":"&gt;",
-  '"':"&quot;","'":"&#39;"
- }[c]));
-}
-
-function formatDate(value){
- if(!value)return "Vĩnh viễn";
- return new Date(value).toLocaleString("vi-VN");
-}
-
 async function createKey(){
  const msg=document.getElementById("createMsg");
  const unit=document.getElementById("unit").value;
@@ -162,12 +191,12 @@ async function createKey(){
   msg.textContent="Thời hạn không hợp lệ";
   return;
  }
- if(!Number.isInteger(maxDevices)||maxDevices<1){
-  msg.textContent="Số thiết bị không hợp lệ";
+ if(!Number.isInteger(maxDevices)||maxDevices<1||maxDevices>1000){
+  msg.textContent="Số thiết bị phải từ 1 đến 1000";
   return;
  }
 
- msg.textContent="Đang tạo Key...";
+ msg.textContent="ĐANG TẠO KEY...";
  try{
   const r=await fetch(API+"/api/admin/create",{
    method:"POST",
@@ -183,8 +212,9 @@ async function createKey(){
    })
   });
   const d=await r.json();
-  if(!d.ok)throw new Error(d.error||"Không thể tạo Key");
-  msg.innerHTML='<span class="green">ĐÃ TẠO KEY: <b>'+
+  if(!d.ok)throw new Error(d.error||"Tạo Key thất bại");
+
+  msg.innerHTML='<span class="green">TẠO THÀNH CÔNG: <b>'+
    escapeHTML(d.key)+'</b></span>';
   await loadKeys();
  }catch(e){
@@ -192,8 +222,22 @@ async function createKey(){
  }
 }
 
+function formatDate(value){
+ if(!value)return "Vĩnh viễn";
+ return new Date(value).toLocaleString("vi-VN");
+}
+
+async function copyKey(key){
+ try{
+  await navigator.clipboard.writeText(key);
+  alert("Đã sao chép Key");
+ }catch(e){
+  prompt("Sao chép Key:",key);
+ }
+}
+
 async function changeStatus(key,status){
- if(!confirm("Xác nhận thay đổi trạng thái Key này?"))return;
+ if(!confirm("Xác nhận thao tác với Key này?"))return;
  try{
   const r=await fetch(API+"/api/admin/status",{
    method:"POST",
@@ -205,26 +249,20 @@ async function changeStatus(key,status){
   });
   const d=await r.json();
   if(!d.ok)throw new Error(d.error||"Thao tác thất bại");
-  loadKeys();
+  await loadKeys();
  }catch(e){alert(e.message)}
-}
-
-async function copyKey(key){
- try{
-  await navigator.clipboard.writeText(key);
-  alert("Đã sao chép Key");
- }catch(e){prompt("Sao chép Key:",key)}
 }
 
 async function loadKeys(){
  const box=document.getElementById("keys");
- box.textContent="Đang tải danh sách...";
+ box.innerHTML='<span class="loader"></span> ĐANG TẢI DỮ LIỆU...';
+
  try{
   const r=await fetch(API+"/api/admin/list",{
    headers:{"Authorization":"Bearer "+getToken()}
   });
   const d=await r.json();
-  if(!d.ok)throw new Error(d.error||"Không tải được danh sách");
+  if(!d.ok)throw new Error(d.error||"Không tải được Key");
 
   if(!d.keys||!d.keys.length){
    box.textContent="Chưa có Key nào.";
@@ -243,23 +281,21 @@ async function loadKeys(){
    item.innerHTML=`
     <b>${escapeHTML(k.key)}</b>
     <p>Ghi chú: ${escapeHTML(k.label||"Không có")}</p>
-    <p>Trạng thái: ${escapeHTML(status)}</p>
+    <p>Trạng thái: <span class="status">${escapeHTML(status)}</span></p>
     <p>Thời hạn: ${escapeHTML(k.duration||"")}</p>
     <p>Hết hạn: ${escapeHTML(formatDate(k.expiresAt))}</p>
     <p>Thiết bị: ${Array.isArray(k.devices)?k.devices.length:0}/${Number(k.maxDevices)||1}</p>
     <div class="actions">
-     <button data-action="copy">SAO CHÉP</button>
-     <button data-action="lock">KHÓA</button>
-     <button data-action="unlock">MỞ KHÓA</button>
-     <button data-action="revoke">THU HỒI</button>
-    </div>
-   `;
+     <button data-a="copy">SAO CHÉP</button>
+     <button data-a="lock">KHÓA</button>
+     <button data-a="unlock">MỞ KHÓA</button>
+     <button data-a="revoke">THU HỒI</button>
+    </div>`;
 
-   item.querySelector('[data-action="copy"]').onclick=()=>copyKey(k.key);
-   item.querySelector('[data-action="lock"]').onclick=()=>changeStatus(k.key,"locked");
-   item.querySelector('[data-action="unlock"]').onclick=()=>changeStatus(k.key,"active");
-   item.querySelector('[data-action="revoke"]').onclick=()=>changeStatus(k.key,"revoked");
-
+   item.querySelector('[data-a="copy"]').onclick=()=>copyKey(k.key);
+   item.querySelector('[data-a="lock"]').onclick=()=>changeStatus(k.key,"locked");
+   item.querySelector('[data-a="unlock"]').onclick=()=>changeStatus(k.key,"active");
+   item.querySelector('[data-a="revoke"]').onclick=()=>changeStatus(k.key,"revoked");
    box.appendChild(item);
   });
  }catch(e){
