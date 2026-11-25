@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANH NAM DZ - SUPER ADMIN</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;padding:20px;
+ background:radial-gradient(circle at top,#18365d,#070b16 65%);
+ color:#fff;font-family:Arial,sans-serif
+}
+.wrap{max-width:950px;margin:35px auto}
+.panel{
+ background:#101a2c;border:1px solid #29476c;
+ border-radius:20px;padding:24px;
+ box-shadow:0 15px 50px #0008
+}
+h1{text-align:center;color:#54dcff;letter-spacing:2px}
+.sub{text-align:center;color:#9bb2d0}
+.section{
+ background:#0a1425;border:1px solid #243c5b;
+ border-radius:14px;padding:18px;margin-top:18px
+}
+input,select{
+ width:100%;padding:14px;margin:7px 0;
+ background:#091323;color:white;
+ border:1px solid #345071;border-radius:9px;
+ font-size:15px
+}
+button{
+ padding:13px 17px;border:0;border-radius:9px;
+ color:white;font-weight:bold;cursor:pointer;
+ background:linear-gradient(90deg,#00a9e9,#625cff);
+ margin:5px 3px
+}
+button:hover{filter:brightness(1.2)}
+.full{width:100%}
+.hidden{display:none}
+.key{
+ padding:14px;margin:10px 0;
+ border:1px solid #29415f;border-radius:10px;
+ overflow-wrap:anywhere;background:#101d31
+}
+.green{color:#55e6a5}
+.red{color:#ff7777}
+.small{font-size:12px;color:#9bb2d0}
+.actions{display:flex;flex-wrap:wrap;gap:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="panel">
+
+<div id="login">
+ <h1>ANH NAM DZ</h1>
+ <p class="sub">SUPER ADMIN CONTROL PANEL</p>
+ <input id="username" placeholder="Tên đăng nhập">
+ <input id="password" type="password" placeholder="Mật khẩu">
+ <button class="full" onclick="login()">ĐĂNG NHẬP</button>
+ <p id="loginMsg"></p>
+</div>
+
+<div id="dashboard" class="hidden">
+ <h1>ANH NAM DZ</h1>
+ <p class="sub">SUPER ADMIN · QUẢN LÝ KEY HỆ THỐNG</p>
+
+ <div class="section">
+  <h3>✦ TẠO KEY MỚI</h3>
+  <input id="label" placeholder="Tên khách hàng / ghi chú">
+
+  <label>Thời hạn Key</label>
+  <input id="duration" type="number" min="1" value="30">
+
+  <select id="unit">
+   <option value="minute">Phút</option>
+   <option value="hour">Giờ</option>
+   <option value="day" selected>Ngày</option>
+   <option value="month">Tháng (30 ngày)</option>
+   <option value="permanent">Vĩnh viễn</option>
+  </select>
+
+  <label>Số thiết bị được phép</label>
+  <input id="count" type="number" min="1" value="1">
+
+  <button class="full" onclick="createKey()">+ TẠO KEY</button>
+  <p id="createMsg"></p>
+ </div>
+
+ <div class="section">
+  <h3>✦ DANH SÁCH KEY</h3>
+  <button onclick="loadKeys()">↻ LÀM MỚI</button>
+  <div id="keys">Đang chờ tải dữ liệu...</div>
+ </div>
+
+ <button class="full" onclick="logout()">ĐĂNG XUẤT</button>
+</div>
+
+</div>
+</div>
+
+<script>
+const API="https://hq-ba-khi-api.hikhikhakhamunly.workers.dev";
+
+function getToken(){
+ return sessionStorage.getItem("hq_admin_token");
+}
+
+async function login(){
+ const msg=document.getElementById("loginMsg");
+ msg.textContent="Đang xác minh...";
+ try{
+  const r=await fetch(API+"/api/admin/login",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+    username:document.getElementById("username").value,
+    password:document.getElementById("password").value
+   })
+  });
+  const d=await r.json();
+  if(!d.ok) throw new Error(d.error||"Đăng nhập thất bại");
+  sessionStorage.setItem("hq_admin_token",d.token);
+  showDashboard();
+ }catch(e){
+  msg.innerHTML='<span class="red">'+escapeHTML(e.message)+'</span>';
+ }
+}
+
+function showDashboard(){
+ document.getElementById("login").classList.add("hidden");
+ document.getElementById("dashboard").classList.remove("hidden");
+ loadKeys();
+}
+
+function logout(){
+ sessionStorage.removeItem("hq_admin_token");
+ location.reload();
+}
+
+function escapeHTML(s){
+ return String(s??"").replace(/[&<>"']/g,c=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",
+  '"':"&quot;","'":"&#39;"
+ }[c]));
+}
+
+function formatDate(value){
+ if(!value)return "Vĩnh viễn";
+ return new Date(value).toLocaleString("vi-VN");
+}
+
+async function createKey(){
+ const msg=document.getElementById("createMsg");
+ const unit=document.getElementById("unit").value;
+ const duration=document.getElementById("duration").value;
+ const maxDevices=Number(document.getElementById("count").value);
+
+ if(unit!=="permanent"&&(!duration||Number(duration)<1)){
+  msg.textContent="Thời hạn không hợp lệ";
+  return;
+ }
+ if(!Number.isInteger(maxDevices)||maxDevices<1){
+  msg.textContent="Số thiết bị không hợp lệ";
+  return;
+ }
+
+ msg.textContent="Đang tạo Key...";
+ try{
+  const r=await fetch(API+"/api/admin/create",{
+   method:"POST",
+   headers:{
+    "Content-Type":"application/json",
+    "Authorization":"Bearer "+getToken()
+   },
+   body:JSON.stringify({
+    label:document.getElementById("label").value,
+    duration:Number(duration),
+    unit,
+    maxDevices
+   })
+  });
+  const d=await r.json();
+  if(!d.ok)throw new Error(d.error||"Không thể tạo Key");
+  msg.innerHTML='<span class="green">ĐÃ TẠO KEY: <b>'+
+   escapeHTML(d.key)+'</b></span>';
+  await loadKeys();
+ }catch(e){
+  msg.innerHTML='<span class="red">'+escapeHTML(e.message)+'</span>';
+ }
+}
+
+async function changeStatus(key,status){
+ if(!confirm("Xác nhận thay đổi trạng thái Key này?"))return;
+ try{
+  const r=await fetch(API+"/api/admin/status",{
+   method:"POST",
+   headers:{
+    "Content-Type":"application/json",
+    "Authorization":"Bearer "+getToken()
+   },
+   body:JSON.stringify({key,status})
+  });
+  const d=await r.json();
+  if(!d.ok)throw new Error(d.error||"Thao tác thất bại");
+  loadKeys();
+ }catch(e){alert(e.message)}
+}
+
+async function copyKey(key){
+ try{
+  await navigator.clipboard.writeText(key);
+  alert("Đã sao chép Key");
+ }catch(e){prompt("Sao chép Key:",key)}
+}
+
+async function loadKeys(){
+ const box=document.getElementById("keys");
+ box.textContent="Đang tải danh sách...";
+ try{
+  const r=await fetch(API+"/api/admin/list",{
+   headers:{"Authorization":"Bearer "+getToken()}
+  });
+  const d=await r.json();
+  if(!d.ok)throw new Error(d.error||"Không tải được danh sách");
+
+  if(!d.keys||!d.keys.length){
+   box.textContent="Chưa có Key nào.";
+   return;
+  }
+
+  box.innerHTML="";
+  d.keys.forEach(k=>{
+   const item=document.createElement("div");
+   item.className="key";
+
+   const status=k.status==="active"?"ĐANG HOẠT ĐỘNG":
+    k.status==="locked"?"ĐÃ KHÓA":
+    k.status==="revoked"?"ĐÃ THU HỒI":k.status;
+
+   item.innerHTML=`
+    <b>${escapeHTML(k.key)}</b>
+    <p>Ghi chú: ${escapeHTML(k.label||"Không có")}</p>
+    <p>Trạng thái: ${escapeHTML(status)}</p>
+    <p>Thời hạn: ${escapeHTML(k.duration||"")}</p>
+    <p>Hết hạn: ${escapeHTML(formatDate(k.expiresAt))}</p>
+    <p>Thiết bị: ${Array.isArray(k.devices)?k.devices.length:0}/${Number(k.maxDevices)||1}</p>
+    <div class="actions">
+     <button data-action="copy">SAO CHÉP</button>
+     <button data-action="lock">KHÓA</button>
+     <button data-action="unlock">MỞ KHÓA</button>
+     <button data-action="revoke">THU HỒI</button>
+    </div>
+   `;
+
+   item.querySelector('[data-action="copy"]').onclick=()=>copyKey(k.key);
+   item.querySelector('[data-action="lock"]').onclick=()=>changeStatus(k.key,"locked");
+   item.querySelector('[data-action="unlock"]').onclick=()=>changeStatus(k.key,"active");
+   item.querySelector('[data-action="revoke"]').onclick=()=>changeStatus(k.key,"revoked");
+
+   box.appendChild(item);
+  });
+ }catch(e){
+  box.innerHTML='<span class="red">'+escapeHTML(e.message)+'</span>';
+ }
+}
+
+if(getToken())showDashboard();
+</script>
+</body>
+</html>
